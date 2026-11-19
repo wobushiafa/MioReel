@@ -407,4 +407,27 @@
     <Setter Property="BorderBrush" Value="#E11D48" />
     <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
+
+  <!-- Volume OSD: pop-in animation replayed each time the popup is opened -->
+  <Style Selector="Border.volume-osd">
+    <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+    <Style.Animations>
+      <Animation Duration="0:0:0.20" FillMode="Forward">
+        <KeyFrame Cue="0%">
+          <Setter Property="Opacity" Value="0" />
+          <Setter Property="ScaleTransform.ScaleX" Value="0.82" />
+          <Setter Property="ScaleTransform.ScaleY" Value="0.82" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="Opacity" Value="1" />
+          <Setter Property="ScaleTransform.ScaleX" Value="1" />
+          <Setter Property="ScaleTransform.ScaleY" Value="1" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector="Border.volume-osd ProgressBar">
+    <Setter Property="Foreground" Value="#FB7185" />
+    <Setter Property="Background" Value="#35FFFFFF" />
+  </Style>
 </Styles>

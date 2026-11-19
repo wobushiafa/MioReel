@@ -23,7 +23,10 @@ public enum HotkeyAction
     PreviousEpisode,
     NextEpisode,
     ToggleMiniMode,
-    RestoreWindow
+    RestoreWindow,
+    VolumeUp,
+    VolumeDown,
+    ToggleMute
 }
 
 public sealed record HotkeyRegistrationStatus(
@@ -131,7 +134,10 @@ public sealed record HotkeySettings(
     HotkeyBinding? PreviousEpisode = null,
     HotkeyBinding? NextEpisode = null,
     HotkeyBinding? ToggleMiniMode = null,
-    HotkeyBinding? RestoreWindow = null)
+    HotkeyBinding? RestoreWindow = null,
+    HotkeyBinding? VolumeUp = null,
+    HotkeyBinding? VolumeDown = null,
+    HotkeyBinding? ToggleMute = null)
 {
     public static HotkeySettings CreateDefaults() => new(
         GlobalHotkeysEnabled: true,
@@ -146,7 +152,10 @@ public sealed record HotkeySettings(
         PreviousEpisode: new(HotkeyModifiers.None, "PageUp"),
         NextEpisode: new(HotkeyModifiers.None, "PageDown"),
         ToggleMiniMode: new(HotkeyModifiers.None, "M"),
-        RestoreWindow: new(HotkeyModifiers.Ctrl, "R"));
+        RestoreWindow: new(HotkeyModifiers.Ctrl, "R"),
+        VolumeUp: new(HotkeyModifiers.Ctrl, "Up"),
+        VolumeDown: new(HotkeyModifiers.Ctrl, "Down"),
+        ToggleMute: new(HotkeyModifiers.Ctrl, "M"));
 
     public HotkeySettings EnsurePopulated()
     {
@@ -164,7 +173,10 @@ public sealed record HotkeySettings(
             PreviousEpisode: NormalizeBinding(PreviousEpisode, defaults.PreviousEpisode!),
             NextEpisode: NormalizeBinding(NextEpisode, defaults.NextEpisode!),
             ToggleMiniMode: NormalizeBinding(ToggleMiniMode, defaults.ToggleMiniMode!),
-            RestoreWindow: NormalizeBinding(RestoreWindow, defaults.RestoreWindow!));
+            RestoreWindow: NormalizeBinding(RestoreWindow, defaults.RestoreWindow!),
+            VolumeUp: NormalizeBinding(VolumeUp, defaults.VolumeUp!),
+            VolumeDown: NormalizeBinding(VolumeDown, defaults.VolumeDown!),
+            ToggleMute: NormalizeBinding(ToggleMute, defaults.ToggleMute!));
     }
 
     public HotkeyBinding GetBinding(HotkeyAction action) => action switch
@@ -181,6 +193,9 @@ public sealed record HotkeySettings(
         HotkeyAction.NextEpisode => NextEpisode ?? HotkeyBinding.Empty,
         HotkeyAction.ToggleMiniMode => ToggleMiniMode ?? HotkeyBinding.Empty,
         HotkeyAction.RestoreWindow => RestoreWindow ?? HotkeyBinding.Empty,
+        HotkeyAction.VolumeUp => VolumeUp ?? HotkeyBinding.Empty,
+        HotkeyAction.VolumeDown => VolumeDown ?? HotkeyBinding.Empty,
+        HotkeyAction.ToggleMute => ToggleMute ?? HotkeyBinding.Empty,
         _ => HotkeyBinding.Empty
     };
 
@@ -204,6 +219,9 @@ public sealed record HotkeySettings(
             HotkeyAction.NextEpisode => this with { NextEpisode = normalized },
             HotkeyAction.ToggleMiniMode => this with { ToggleMiniMode = normalized },
             HotkeyAction.RestoreWindow => this with { RestoreWindow = normalized },
+            HotkeyAction.VolumeUp => this with { VolumeUp = normalized },
+            HotkeyAction.VolumeDown => this with { VolumeDown = normalized },
+            HotkeyAction.ToggleMute => this with { ToggleMute = normalized },
             _ => this
         };
     }

@@ -66,6 +66,7 @@ public sealed class PlayerViewModel : ReactiveObject
     private double _lastNonZeroVolume = 1.0;
     private bool _isMuted;
     private double _audioBoostDb;
+    private bool _isVolumeOsdVisible;
     private readonly IDownloadService? _downloads;
     private bool _offlinePlayback;
     private int _selectedQuality = 1080;
@@ -521,6 +522,26 @@ public sealed class PlayerViewModel : ReactiveObject
     public string VolumeTooltip => _audioBoostDb > 0.1
         ? $"应用内音量 {VolumeLabel} · 增强 {AudioBoostLabel}（点击调节 / 右键静音 / 滚轮增减）"
         : $"应用内音量 {VolumeLabel}（点击调节 / 右键静音 / 滚轮增减）";
+
+    /// <summary>
+    /// 音量变化时短暂显示的 OSD 浮层开关。UI 层负责在显示后延时收起。
+    /// </summary>
+    public bool IsVolumeOsdVisible
+    {
+        get => _isVolumeOsdVisible;
+        set => this.RaiseAndSetIfChanged(ref _isVolumeOsdVisible, value);
+    }
+
+    /// <summary>
+    /// OSD 进度条填充百分比（0~1），静音时归零。
+    /// </summary>
+    public double VolumeOsdLevel => IsEffectivelyMuted ? 0.0 : _volume;
+
+    /// <summary>
+    /// OSD 文案，例如「音量 65%」或「已静音」。
+    /// </summary>
+    public string VolumeOsdText => IsEffectivelyMuted ? "已静音" : $"音量 {VolumeLabel}";
+
     public string QualityLabel => $"{_selectedQuality}P";
     public VideoRenderMode RenderMode => _renderMode;
     public string RenderModeLabel => RenderPresets.FirstOrDefault(x => x.Mode == _renderMode).ShortLabel ?? "自动";
@@ -920,6 +941,8 @@ public sealed class PlayerViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(IsVolumeHigh));
         this.RaisePropertyChanged(nameof(VolumeLabel));
         this.RaisePropertyChanged(nameof(VolumeTooltip));
+        this.RaisePropertyChanged(nameof(VolumeOsdLevel));
+        this.RaisePropertyChanged(nameof(VolumeOsdText));
     }
 
     private void SelectSpeed(PlayerMenuOptionViewModel? option)

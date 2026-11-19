@@ -665,6 +665,57 @@
 
                       </Grid>
                     </aviora:AvioraCard>
+
+                    <!-- Volume OSD: topmost popup so it stays visible above the NativeSurface child HWND -->
+                    <Popup x:Name="VolumeOsdPopup"
+                           PlacementTarget="{Binding #PlayerStageWrap}"
+                           Placement="Center"
+                           Topmost="True"
+                           ShouldUseOverlayLayer="False"
+                           WindowManagerAddShadowHint="False"
+                           IsLightDismissEnabled="False"
+                           IsHitTestVisible="False"
+                           IsOpen="{Binding Player.IsVolumeOsdVisible, Mode=OneWay}">
+                      <Border Classes="volume-osd"
+                              MinWidth="180"
+                              CornerRadius="14"
+                              Padding="14,12"
+                              BorderBrush="#50FFFFFF"
+                              BorderThickness="1"
+                              BoxShadow="0 10 30 0 #A0000000">
+                        <Border.RenderTransform>
+                          <ScaleTransform ScaleX="1" ScaleY="1" />
+                        </Border.RenderTransform>
+                        <Border.Background>
+                          <SolidColorBrush Color="#E617191F" />
+                        </Border.Background>
+                        <StackPanel Spacing="9">
+                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Center">
+                            <Grid Width="18" Height="18">
+                              <PathIcon Data="{StaticResource IconVolumeMute}" Width="16" Height="16" Foreground="#FB7185" IsVisible="{Binding Player.IsEffectivelyMuted}" />
+                              <PathIcon Data="{StaticResource IconVolumeLow}" Width="16" Height="16" Foreground="#FB7185" IsVisible="{Binding Player.IsVolumeLow}" />
+                              <PathIcon Data="{StaticResource IconVolumeHigh}" Width="16" Height="16" Foreground="#FB7185" IsVisible="{Binding Player.IsVolumeHigh}" />
+                            </Grid>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Player.VolumeOsdText}"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="#F8FAFC"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding Player.VolumePercent, StringFormat='{}{}%'}"
+                                       FontSize="12"
+                                       Foreground="#94A3B8"
+                                       VerticalAlignment="Center" />
+                          </Grid>
+                          <ProgressBar Minimum="0"
+                                       Maximum="1"
+                                       Value="{Binding Player.VolumeOsdLevel}"
+                                       Height="4"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                      </Border>
+                    </Popup>
                   </Grid>
                 </Grid>
               </aviora:HeroOverlay>

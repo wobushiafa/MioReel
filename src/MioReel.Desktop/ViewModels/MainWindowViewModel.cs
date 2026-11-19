@@ -1172,6 +1172,9 @@ public sealed class MainWindowViewModel : ReactiveObject
         HotkeyRows.Add(new(HotkeyAction.NextEpisode, "下一集", "切换到当前短剧下一集", false, _hotkeys.GetBinding(HotkeyAction.NextEpisode)));
         HotkeyRows.Add(new(HotkeyAction.ToggleMiniMode, "切换迷你窗口", "在常规大窗与迷你悬浮小窗之间切换", false, _hotkeys.GetBinding(HotkeyAction.ToggleMiniMode)));
         HotkeyRows.Add(new(HotkeyAction.RestoreWindow, "还原窗体", "退出迷你小窗并恢复标准窗口尺寸", false, _hotkeys.GetBinding(HotkeyAction.RestoreWindow)));
+        HotkeyRows.Add(new(HotkeyAction.VolumeUp, "增大音量", "应用内音量提高一档（每次 5%）", false, _hotkeys.GetBinding(HotkeyAction.VolumeUp)));
+        HotkeyRows.Add(new(HotkeyAction.VolumeDown, "减小音量", "应用内音量降低一档（每次 5%）", false, _hotkeys.GetBinding(HotkeyAction.VolumeDown)));
+        HotkeyRows.Add(new(HotkeyAction.ToggleMute, "静音 / 取消静音", "一键切换应用内静音状态", false, _hotkeys.GetBinding(HotkeyAction.ToggleMute)));
         RefreshHotkeyStatuses();
     }
 

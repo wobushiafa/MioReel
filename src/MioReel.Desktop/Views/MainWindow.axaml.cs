@@ -38,6 +38,7 @@ public partial class MainWindow : Window
     private long _lastDownloadRefreshTick;
     private readonly DispatcherTimer _controlsExitHideTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     private readonly DispatcherTimer _controlsIdleHideTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private readonly DispatcherTimer _volumeOsdHideTimer = new() { Interval = TimeSpan.FromMilliseconds(1200) };
     private Point? _lastStagePointerPos;
     private WinPoint? _lastNativeCursorPos;
     private bool _isAdjustingMiniAspect;
@@ -127,6 +128,7 @@ public partial class MainWindow : Window
         _playbackSyncTimer.Start();
         _controlsExitHideTimer.Tick += OnControlsExitHideTick;
         _controlsIdleHideTimer.Tick += OnControlsIdleHideTick;
+        _volumeOsdHideTimer.Tick += OnVolumeOsdHideTick;
 
         SizeChanged += OnWindowSizeChanged;
         PositionChanged += (_, _) =>
@@ -174,6 +176,7 @@ public partial class MainWindow : Window
             _playbackSyncTimer.Stop();
             _controlsExitHideTimer.Stop();
             _controlsIdleHideTimer.Stop();
+            _volumeOsdHideTimer.Stop();
             if (OperatingSystem.IsWindows() && _wndProcHook is not null)
                 Win32Properties.RemoveWndProcHookCallback(this, _wndProcHook);
             _viewModel.Player.Close();
@@ -530,6 +533,8 @@ public partial class MainWindow : Window
                 _pausedByBossKey = false;
                 _controlsExitHideTimer.Stop();
                 _controlsIdleHideTimer.Stop();
+                _volumeOsdHideTimer.Stop();
+                _viewModel.Player.IsVolumeOsdVisible = false;
             }
         }
         else if (e.PropertyName == nameof(PlayerViewModel.IsAnyMenuOpen))
@@ -580,6 +585,7 @@ public partial class MainWindow : Window
         else if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))
         {
             ApplyPlayerVolume();
+            ShowVolumeOsd();
         }
         else if (e.PropertyName is nameof(PlayerViewModel.UseNativeDanmakuOverlay)
                  or nameof(PlayerViewModel.IsDanmakuEnabled)
@@ -622,6 +628,21 @@ public partial class MainWindow : Window
     {
         FrameFluxPlayer.Volume = _viewModel.Player.Volume;
         FrameFluxPlayer.IsMuted = _viewModel.Player.IsMuted;
+    }
+
+    private void ShowVolumeOsd()
+    {
+        if (!_viewModel.Player.IsOpen)
+            return;
+        _viewModel.Player.IsVolumeOsdVisible = true;
+        _volumeOsdHideTimer.Stop();
+        _volumeOsdHideTimer.Start();
+    }
+
+    private void OnVolumeOsdHideTick(object? sender, EventArgs e)
+    {
+        _volumeOsdHideTimer.Stop();
+        _viewModel.Player.IsVolumeOsdVisible = false;
     }
 
     private void OnFrameFluxPlaybackError(object? sender, MediaPlaybackErrorEventArgs e)
@@ -1519,6 +1540,27 @@ public partial class MainWindow : Window
             if (hotkeys.GetBinding(HotkeyAction.NextEpisode).Matches(modifiers, keyName))
             {
                 ((System.Windows.Input.ICommand)_viewModel.Player.NextEpisodeCommand).Execute(null);
+                ShowPlayerControls();
+                e.Handled = true;
+                return;
+            }
+            if (hotkeys.GetBinding(HotkeyAction.VolumeUp).Matches(modifiers, keyName))
+            {
+                _viewModel.Player.StepVolume(0.05);
+                ShowPlayerControls();
+                e.Handled = true;
+                return;
+            }
+            if (hotkeys.GetBinding(HotkeyAction.VolumeDown).Matches(modifiers, keyName))
+            {
+                _viewModel.Player.StepVolume(-0.05);
+                ShowPlayerControls();
+                e.Handled = true;
+                return;
+            }
+            if (hotkeys.GetBinding(HotkeyAction.ToggleMute).Matches(modifiers, keyName))
+            {
+                _viewModel.Player.ToggleMute();
                 ShowPlayerControls();
                 e.Handled = true;
                 return;
