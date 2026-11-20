@@ -11,3 +11,6 @@ debug_err.txt
 
 # 自建账号服务属于私有后端，不纳入本仓库
 src/MioReel.Api/
+
+# 工作区会话记录与日志，不纳入本仓库
+.workbuddy/

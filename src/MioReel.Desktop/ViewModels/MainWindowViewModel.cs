@@ -1228,6 +1228,8 @@ public sealed class MainWindowViewModel : ReactiveObject
         }
         SaveSettings();
         var vm = Program.Services.GetRequiredService<LoginWindowViewModel>();
+        vm.LoginSucceeded += isRegister =>
+            _toast.ShowSuccess(isRegister ? "注册成功，已自动登录" : "登录成功");
         var window = new LoginWindow(vm);
         window.Show();
     }

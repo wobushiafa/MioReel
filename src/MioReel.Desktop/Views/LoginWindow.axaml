@@ -51,9 +51,13 @@
         </StackPanel>
       </StackPanel>
 
-      <!-- 错误提示 -->
-      <TextBlock Grid.Row="2" Text="{Binding ErrorText}" TextWrapping="Wrap" TextAlignment="Center"
-                 FontSize="12" IsVisible="{Binding HasError}" Foreground="#FB7185" />
+      <!-- 状态提示：失败(红) / 成功(绿) 互斥显示 -->
+      <Grid Grid.Row="2">
+        <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" TextAlignment="Center"
+                   FontSize="12" IsVisible="{Binding HasError}" Foreground="#FB7185" />
+        <TextBlock Text="{Binding SuccessText}" TextWrapping="Wrap" TextAlignment="Center"
+                   FontSize="12" IsVisible="{Binding HasSuccess}" Foreground="#4ADE80" />
+      </Grid>
 
       <!-- 主操作按钮 -->
       <Button Grid.Row="3" Classes="brand-cta" HorizontalAlignment="Stretch"

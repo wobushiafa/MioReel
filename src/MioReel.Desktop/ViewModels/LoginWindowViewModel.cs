@@ -15,6 +15,7 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
     private string _username = string.Empty;
     private string _password = string.Empty;
     private string? _errorText;
+    private string? _successText;
     private bool _isBusy;
     private bool _isRegisterMode;
     private bool _disposed;
@@ -27,7 +28,8 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
         CancelCommand = ReactiveCommand.Create(Cancel);
     }
 
-    public event Action? LoginSucceeded;
+    /// <summary>登录/注册成功，参数为是否注册。供主窗口弹出成功提示。</summary>
+    public event Action<bool>? LoginSucceeded;
     public event Action? RequestClose;
 
     public ReactiveCommand<RxVoid, RxVoid> SubmitCommand { get; }
@@ -49,7 +51,21 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
     public string? ErrorText
     {
         get => _errorText;
-        private set => this.RaiseAndSetIfChanged(ref _errorText, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _errorText, value);
+            this.RaisePropertyChanged(nameof(HasError));
+        }
+    }
+
+    public string? SuccessText
+    {
+        get => _successText;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _successText, value);
+            this.RaisePropertyChanged(nameof(HasSuccess));
+        }
     }
 
     public bool IsBusy
@@ -65,6 +81,7 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
     }
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorText);
+    public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessText);
 
     public string ModeTitle => IsRegisterMode ? "注册新账号" : "登录妙妙短剧";
     public string ModeSubtitle => IsRegisterMode
@@ -77,6 +94,7 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
     {
         IsRegisterMode = !IsRegisterMode;
         ErrorText = null;
+        SuccessText = null;
         this.RaisePropertyChanged(nameof(ModeTitle));
         this.RaisePropertyChanged(nameof(ModeSubtitle));
         this.RaisePropertyChanged(nameof(PrimaryButtonText));
@@ -91,6 +109,7 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
         _cts = new CancellationTokenSource();
         var ct = _cts.Token;
         ErrorText = null;
+        SuccessText = null;
 
         var username = Username.Trim();
         var password = Password;
@@ -99,14 +118,19 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
             ErrorText = "请输入用户名";
             return;
         }
+        if (username.Length is < 2 or > 32)
+        {
+            ErrorText = "用户名长度需为 2 到 32 个字符";
+            return;
+        }
         if (string.IsNullOrWhiteSpace(password))
         {
             ErrorText = "请输入密码";
             return;
         }
-        if (password.Length < 6)
+        if (password.Length is < 6 or > 128)
         {
-            ErrorText = "密码至少需要 6 个字符";
+            ErrorText = "密码长度需为 6 到 128 个字符";
             return;
         }
 
@@ -120,7 +144,10 @@ public sealed class LoginWindowViewModel : ReactiveObject, IDisposable
 
             // 成功后清空内存中的密码，避免滞留
             Password = string.Empty;
-            LoginSucceeded?.Invoke();
+            SuccessText = register ? "注册成功，已自动登录，正在同步历史…" : "登录成功，正在同步历史…";
+            LoginSucceeded?.Invoke(register);
+            // 停留片刻让用户看清反馈，再关闭窗口
+            await Task.Delay(900);
             RequestClose?.Invoke();
         }
         catch (OperationCanceledException) { }

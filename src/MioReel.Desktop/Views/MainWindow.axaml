@@ -209,29 +209,25 @@
                                         HorizontalContentAlignment="Center"
                                         Content="登录 / 注册"
                                         IsVisible="{Binding IsSignedOut}"
-                                        Command="{Binding OpenLoginCommand}"
-                                        Click="OnAccountMenuClick" />
+                                        Command="{Binding OpenLoginCommand}" />
                                 <StackPanel Spacing="8" IsVisible="{Binding IsSignedIn}">
                                   <Button Classes="surface-btn"
                                           HorizontalAlignment="Stretch"
                                           HorizontalContentAlignment="Center"
                                           Content="立即同步"
-                                          Command="{Binding SyncNowCommand}"
-                                          Click="OnAccountMenuClick" />
+                                          Command="{Binding SyncNowCommand}" />
                                   <Button Classes="surface-btn"
                                           HorizontalAlignment="Stretch"
                                           HorizontalContentAlignment="Center"
                                           Content="退出登录"
-                                          Command="{Binding SignOutCommand}"
-                                          Click="OnAccountMenuClick" />
+                                          Command="{Binding SignOutCommand}" />
                                 </StackPanel>
                                 <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" />
                                 <Button Classes="surface-btn"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Center"
                                         Content="账号设置…"
-                                        Command="{Binding OpenSettingsCommand}"
-                                        Click="OnAccountMenuClick" />
+                                        Command="{Binding OpenSettingsCommand}" />
                               </StackPanel>
                             </Border>
                           </Flyout>
