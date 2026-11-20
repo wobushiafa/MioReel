@@ -84,6 +84,8 @@ public static class Program
                 services.AddSingleton<IToastHostService>(sp => sp.GetRequiredService<ToastService>());
 
                 services.AddSingleton<IGlobalHotkeyService>(_ => GlobalHotkeyServiceFactory.Create());
+                services.AddTransient<LoginWindowViewModel>();
+                services.AddTransient<LoginWindow>();
                 services.AddSingleton<PlayerViewModel>();
                 services.AddSingleton<MainWindowViewModel>();
                 services.AddSingleton<MainWindow>();

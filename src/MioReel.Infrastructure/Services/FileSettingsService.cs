@@ -112,6 +112,9 @@ public sealed class FileSettingsService : ISettingsService
                 ? baseFallback.GatewayBaseUrl
                 : value.GatewayBaseUrl.Trim(),
             GatewayToken = (value.GatewayToken ?? string.Empty).Trim(),
+            AccountApiBaseUrl = string.IsNullOrWhiteSpace(value.AccountApiBaseUrl)
+                ? baseFallback.AccountApiBaseUrl
+                : value.AccountApiBaseUrl.Trim(),
             Hotkeys = (value.Hotkeys ?? baseFallback.Hotkeys ?? HotkeySettings.CreateDefaults()).EnsurePopulated()
         };
     }

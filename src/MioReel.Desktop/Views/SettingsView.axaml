@@ -57,6 +57,42 @@
       </StackPanel>
     </aviora:AvioraCard>
 
+    <!-- Account & Cloud Sync -->
+    <aviora:AvioraCard Background="{DynamicResource SurfaceBrush}"
+                       BorderBrush="{DynamicResource BorderSubtleBrush}"
+                       BorderThickness="1"
+                       CornerRadius="18"
+                       Padding="18">
+      <StackPanel Spacing="14">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <StackPanel Spacing="2">
+            <TextBlock Text="账号与云同步" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="{Binding AccountStatusText}" FontSize="{DynamicResource AppMinFontSize}" Foreground="{DynamicResource TextMutedBrush}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="brand-cta" Content="登录 / 注册" IsVisible="{Binding IsSignedOut}" Command="{Binding OpenLoginCommand}" />
+            <Button Classes="surface-btn" Content="退出登录" IsVisible="{Binding IsSignedIn}" Command="{Binding SignOutCommand}" />
+            <Button Classes="surface-btn" Content="立即同步" IsVisible="{Binding IsSignedIn}" Command="{Binding SyncNowCommand}" />
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="登录后观看历史会自动上传到云端，在任意电脑用同一账号登录即可继续观看；未登录时历史仅保存在本机。"
+                   FontSize="{DynamicResource AppMinFontSize}" TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" />
+
+        <Separator Background="{DynamicResource BorderSubtleBrush}" Height="1" />
+
+        <StackPanel Spacing="8">
+          <TextBlock Text="账号服务地址" FontSize="{DynamicResource AppMinFontSize}" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" />
+          <TextBox AutomationProperties.Name="账号服务地址"
+                   Text="{Binding AccountApiBaseUrl, Mode=TwoWay}"
+                   PlaceholderText="https://account.example.com"
+                   CornerRadius="10" Height="36" VerticalContentAlignment="Center" />
+          <TextBlock Text="填写你部署的账号服务根地址（IIS 站点地址），修改后自动保存。"
+                     FontSize="{DynamicResource AppMinFontSize}" TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" />
+        </StackPanel>
+      </StackPanel>
+    </aviora:AvioraCard>
+
     <!-- Playback -->
     <aviora:AvioraCard Background="{DynamicResource SurfaceBrush}"
                        BorderBrush="{DynamicResource BorderSubtleBrush}"

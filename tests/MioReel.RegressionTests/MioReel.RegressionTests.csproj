@@ -2,8 +2,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <PublishAot>false</PublishAot>
+    <!-- 仅当本地存在私有 API 项目时才启用相关测试；他人克隆后无此目录也能编译 -->
+    <DefineConstants Condition="Exists('../../src/MioReel.Api/MioReel.Api.csproj')">$(DefineConstants);HAS_API_PROJECT</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/MioReel.Desktop/MioReel.Desktop.csproj" />
+    <ProjectReference Include="../../src/MioReel.Api/MioReel.Api.csproj" Condition="Exists('../../src/MioReel.Api/MioReel.Api.csproj')" />
   </ItemGroup>
 </Project>

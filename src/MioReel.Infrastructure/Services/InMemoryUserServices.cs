@@ -20,6 +20,13 @@ public sealed class InMemoryHistoryService : IHistoryService
         _records.RemoveAll(x => x.Drama.SeriesId == seriesId);
 
     public void Clear() => _records.Clear();
+
+    public void ReplaceAll(IReadOnlyList<HistoryRecord> records)
+    {
+        _records.Clear();
+        if (records is not null)
+            _records.AddRange(records.Where(x => x?.Drama is not null));
+    }
 }
 
 public sealed class InMemoryDownloadService : IDownloadService

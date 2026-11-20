@@ -128,7 +128,7 @@ internal static class CatalogRegressionTests
         var player = new PlayerViewModel(source, new ProxyStub(), history, settings, toast);
         return new MainWindowViewModel(source, history, new InMemoryDownloadService(), settings,
             DispatchProxy.Create<IDialogService, NoopProxy>(), DispatchProxy.Create<ILoadingService, NoopProxy>(), toast,
-            new NullGlobalHotkeyService("test"), player);
+            new NullGlobalHotkeyService("test"), player, new StubAuthService(), new StubHistorySyncService());
     }
 
     private static List<DramaItem> Items(int first, int count) => Enumerable.Range(first, count)
@@ -155,6 +155,32 @@ internal static class CatalogRegressionTests
         public Task<Uri> PreparePlayableUriAsync(ResolvedStreamInfo stream, CancellationToken ct = default) => throw new NotSupportedException();
         public void ReleaseSession(Uri? uri) { }
         public void Dispose() { }
+    }
+
+    private sealed class StubAuthService : IAuthService
+    {
+        public UserProfile? CurrentUser => null;
+        public string? AccessToken => null;
+        public bool IsSignedIn => false;
+        public event Action? AuthStateChanged { add { } remove { } }
+        public Task<AuthResult> LoginAsync(string username, string password, CancellationToken ct = default) =>
+            Task.FromResult(new AuthResult("token", new UserProfile(username, username, null, DateTimeOffset.UtcNow)));
+        public Task<AuthResult> RegisterAsync(string username, string password, CancellationToken ct = default) =>
+            Task.FromResult(new AuthResult("token", new UserProfile(username, username, null, DateTimeOffset.UtcNow)));
+        public Task RestoreAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public void SignOut() { }
+    }
+
+    private sealed class StubHistorySyncService : IHistorySyncService
+    {
+        public bool IsEnabled => false;
+        public Task<HistorySyncResult> UploadAllAsync(IReadOnlyList<HistoryRecord> local, CancellationToken ct = default) =>
+            Task.FromResult(new HistorySyncResult(local, DateTimeOffset.UtcNow));
+        public Task<HistorySyncResult> DownloadAllAsync(CancellationToken ct = default) =>
+            Task.FromResult(new HistorySyncResult([], DateTimeOffset.UtcNow));
+        public Task PushOneAsync(HistoryRecord record, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RemoveOneAsync(string seriesId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task ClearAllAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class CatalogSource(Func<DramaCategory, int, CancellationToken, Task<CatalogPageResult>> load) : IDramaCatalogService

@@ -21,6 +21,47 @@ public interface IHistoryService
     void RecordWatch(DramaItem drama, int episodeNo, int progressPercent, double positionSeconds = 0, double durationSeconds = 0);
     void Remove(string seriesId);
     void Clear();
+
+    /// <summary>用云端合并结果整体替换本地历史（不触发任何云端回传）。</summary>
+    void ReplaceAll(IReadOnlyList<HistoryRecord> records);
+}
+
+/// <summary>
+/// 账号会话服务：账号密码登录/注册、会话持久化、登录状态广播。
+/// 未登录时所有方法均可安全调用；与历史同步服务解耦。
+/// </summary>
+public interface IAuthService
+{
+    UserProfile? CurrentUser { get; }
+    string? AccessToken { get; }
+    bool IsSignedIn { get; }
+
+    event Action? AuthStateChanged;
+
+    /// <summary>用账号密码登录；成功后服务端签发 token，本方法负责落盘并广播。</summary>
+    Task<AuthResult> LoginAsync(string username, string password, CancellationToken ct = default);
+
+    /// <summary>注册新账号并直接登录；用户名已存在等错误以异常抛出。</summary>
+    Task<AuthResult> RegisterAsync(string username, string password, CancellationToken ct = default);
+
+    /// <summary>用本地已保存的 token 恢复会话；失败时静默回到未登录。</summary>
+    Task RestoreAsync(CancellationToken ct = default);
+
+    void SignOut();
+}
+
+/// <summary>
+/// 云端历史同步：登录后将本地历史上传并与云端按剧集合并，返回合并结果。
+/// 未登录时直接抛出 InvalidOperationException，由调用方决定是否提示。
+/// </summary>
+public interface IHistorySyncService
+{
+    bool IsEnabled { get; }
+    Task<HistorySyncResult> UploadAllAsync(IReadOnlyList<HistoryRecord> local, CancellationToken ct = default);
+    Task<HistorySyncResult> DownloadAllAsync(CancellationToken ct = default);
+    Task PushOneAsync(HistoryRecord record, CancellationToken ct = default);
+    Task RemoveOneAsync(string seriesId, CancellationToken ct = default);
+    Task ClearAllAsync(CancellationToken ct = default);
 }
 
 public interface IDownloadService

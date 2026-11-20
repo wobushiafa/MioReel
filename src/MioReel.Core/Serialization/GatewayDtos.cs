@@ -111,5 +111,11 @@ public sealed record GatewayDanmakuItem(
 [JsonSerializable(typeof(HotkeySettings))]
 [JsonSerializable(typeof(HotkeyBinding))]
 [JsonSerializable(typeof(List<HistoryRecord>))]
+[JsonSerializable(typeof(HistoryRecord))]
 [JsonSerializable(typeof(List<DownloadTaskItem>))]
+[JsonSerializable(typeof(UserProfile))]
+[JsonSerializable(typeof(AuthCredentials))]
+[JsonSerializable(typeof(AuthResult))]
+[JsonSerializable(typeof(HistorySyncResult))]
+[JsonSerializable(typeof(StoredSession))]
 public sealed partial class MioReelJsonContext : JsonSerializerContext;

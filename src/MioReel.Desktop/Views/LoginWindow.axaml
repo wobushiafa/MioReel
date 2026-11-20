@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MioReel.Desktop.ViewModels"
+        x:Class="MioReel.Desktop.Views.LoginWindow"
+        x:DataType="vm:LoginWindowViewModel"
+        Title="账号登录"
+        Width="420"
+        Height="500"
+        MinWidth="420"
+        MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBgBrush}"
+        Icon="avares://MioReel.Desktop/Assets/MioReel.ico">
+
+  <Border Margin="26,24" Padding="24,26"
+          Background="{DynamicResource SurfaceBrush}"
+          BorderBrush="{DynamicResource BorderSubtleBrush}"
+          BorderThickness="1"
+          CornerRadius="20">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="18">
+      <!-- 标题 -->
+      <StackPanel Grid.Row="0" Spacing="6" HorizontalAlignment="Center">
+        <Border Width="46" Height="46" CornerRadius="14" Background="{StaticResource BrandGradientBrush}"
+                HorizontalAlignment="Center">
+          <PathIcon Data="{StaticResource IconLogo}" Width="22" Height="22" Foreground="#FFFFFF" />
+        </Border>
+        <TextBlock Text="{Binding ModeTitle}" FontSize="18" FontWeight="Bold"
+                   HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+        <TextBlock Text="{Binding ModeSubtitle}" FontSize="12"
+                   HorizontalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" />
+      </StackPanel>
+
+      <!-- 表单 -->
+      <StackPanel Grid.Row="1" Spacing="12">
+        <StackPanel Spacing="6">
+          <TextBlock Text="用户名" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" />
+          <TextBox AutomationProperties.Name="用户名"
+                   Text="{Binding Username, Mode=TwoWay}"
+                   PlaceholderText="2-32 个字符"
+                   CornerRadius="10" Height="38" VerticalContentAlignment="Center"
+                   IsEnabled="{Binding !IsBusy}" />
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Text="密码" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" />
+          <TextBox AutomationProperties.Name="密码"
+                   Text="{Binding Password, Mode=TwoWay}"
+                   PasswordChar="●"
+                   PlaceholderText="至少 6 个字符"
+                   CornerRadius="10" Height="38" VerticalContentAlignment="Center"
+                   IsEnabled="{Binding !IsBusy}" />
+        </StackPanel>
+      </StackPanel>
+
+      <!-- 错误提示 -->
+      <TextBlock Grid.Row="2" Text="{Binding ErrorText}" TextWrapping="Wrap" TextAlignment="Center"
+                 FontSize="12" IsVisible="{Binding HasError}" Foreground="#FB7185" />
+
+      <!-- 主操作按钮 -->
+      <Button Grid.Row="3" Classes="brand-cta" HorizontalAlignment="Stretch"
+              Height="40" Content="{Binding PrimaryButtonText}"
+              IsEnabled="{Binding !IsBusy}" Command="{Binding SubmitCommand}" />
+
+      <!-- 注册/登录切换 -->
+      <StackPanel Grid.Row="4" Spacing="10">
+        <Button Classes="surface-btn" HorizontalAlignment="Stretch"
+                Content="{Binding ToggleModeText}" Command="{Binding ToggleModeCommand}" />
+        <TextBlock Text="账号信息保存在你自建的账号服务中，客户端不保存密码"
+                   TextWrapping="Wrap" TextAlignment="Center" FontSize="11"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

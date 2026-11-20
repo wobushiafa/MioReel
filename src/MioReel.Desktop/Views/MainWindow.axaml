@@ -178,6 +178,66 @@
                                 Spacing="8"
                                 VerticalAlignment="Center"
                                 chrome:WindowDecorationProperties.ElementRole="User">
+                      <!-- 账号入口：未登录显示"登录"，登录后显示昵称，点击弹出账号菜单 -->
+                      <Button x:Name="AccountButton"
+                              AutomationProperties.Name="账号"
+                              Classes="surface-btn"
+                              Height="34"
+                              Padding="10,0"
+                              CornerRadius="8"
+                              ToolTip.Tip="{Binding AccountStatusText}">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                          <PathIcon Data="{StaticResource IconUser}" Width="14" Height="14" VerticalAlignment="Center" />
+                          <TextBlock Text="登录" IsVisible="{Binding IsSignedOut}" VerticalAlignment="Center" Foreground="{DynamicResource AccentRoseBrush}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding AccountNickname}" IsVisible="{Binding IsSignedIn}" VerticalAlignment="Center" MaxWidth="96" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </StackPanel>
+                        <Button.Flyout>
+                          <Flyout Placement="BottomEdgeAlignedRight" x:DataType="vm:MainWindowViewModel">
+                            <Border Background="{DynamicResource SurfaceSolidBrush}"
+                                    BorderBrush="{DynamicResource BorderStrongBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="14"
+                                    Padding="14"
+                                    Width="230">
+                              <StackPanel Spacing="10">
+                                <TextBlock Text="{Binding AccountStatusText}"
+                                           FontSize="{DynamicResource AppMinFontSize}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextWrapping="Wrap" />
+                                <Button Classes="brand-cta"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Content="登录 / 注册"
+                                        IsVisible="{Binding IsSignedOut}"
+                                        Command="{Binding OpenLoginCommand}"
+                                        Click="OnAccountMenuClick" />
+                                <StackPanel Spacing="8" IsVisible="{Binding IsSignedIn}">
+                                  <Button Classes="surface-btn"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Center"
+                                          Content="立即同步"
+                                          Command="{Binding SyncNowCommand}"
+                                          Click="OnAccountMenuClick" />
+                                  <Button Classes="surface-btn"
+                                          HorizontalAlignment="Stretch"
+                                          HorizontalContentAlignment="Center"
+                                          Content="退出登录"
+                                          Command="{Binding SignOutCommand}"
+                                          Click="OnAccountMenuClick" />
+                                </StackPanel>
+                                <Border Height="1" Background="{DynamicResource BorderSubtleBrush}" />
+                                <Button Classes="surface-btn"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        Content="账号设置…"
+                                        Command="{Binding OpenSettingsCommand}"
+                                        Click="OnAccountMenuClick" />
+                              </StackPanel>
+                            </Border>
+                          </Flyout>
+                        </Button.Flyout>
+                      </Button>
+
                       <Button x:Name="ThemeToggleButton"
                               AutomationProperties.Name="切换主题"
                               Classes="surface-btn"

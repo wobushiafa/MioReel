@@ -1056,6 +1056,11 @@ public partial class MainWindow : Window
         return false;
     }
 
+    private void OnAccountMenuClick(object? sender, RoutedEventArgs e)
+    {
+        AccountButton.Flyout?.Hide();
+    }
+
     private void OnTitleBarPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (IsInteractiveControl(e.Source))

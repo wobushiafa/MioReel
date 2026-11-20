@@ -4,6 +4,8 @@ using Aviora.Presentation.Loadings;
 using Aviora.Presentation.Toasts;
 using MioReel.Core.Abstractions;
 using MioReel.Core.Models;
+using MioReel.Desktop.Views;
+using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 
@@ -19,6 +21,8 @@ public sealed class MainWindowViewModel : ReactiveObject
     private readonly ILoadingService _loading;
     private readonly IToastService _toast;
     private readonly IGlobalHotkeyService _globalHotkeys;
+    private readonly IAuthService _auth;
+    private readonly IHistorySyncService _historySync;
 
     private CancellationTokenSource? _searchDebounceCts;
     private CancellationTokenSource? _catalogCts;
@@ -56,6 +60,9 @@ public sealed class MainWindowViewModel : ReactiveObject
     private string? _searchErrorMessage;
     private HotkeySettings _hotkeys = HotkeySettings.CreateDefaults();
     private HotkeyAction? _activeRecordingAction;
+    private string _accountApiBaseUrl = string.Empty;
+    private bool _isSyncing;
+    private long _lastCloudPushTick;
 
     public MainWindowViewModel(
         IDramaCatalogService catalog,
@@ -66,7 +73,9 @@ public sealed class MainWindowViewModel : ReactiveObject
         ILoadingService loading,
         IToastService toast,
         IGlobalHotkeyService globalHotkeys,
-        PlayerViewModel player)
+        PlayerViewModel player,
+        IAuthService auth,
+        IHistorySyncService historySync)
     {
         _catalog = catalog;
         _history = history;
@@ -76,6 +85,8 @@ public sealed class MainWindowViewModel : ReactiveObject
         _loading = loading;
         _toast = toast;
         _globalHotkeys = globalHotkeys;
+        _auth = auth;
+        _historySync = historySync;
         Player = player;
         Player.HistoryUpdated += OnPlayerHistoryUpdated;
         Player.ClosingRequested += OnPlayerClosingRequested;
@@ -88,8 +99,11 @@ public sealed class MainWindowViewModel : ReactiveObject
         _downloadDirectory = s.DownloadDirectory;
         _gatewayBaseUrl = s.GatewayBaseUrl;
         _gatewayToken = s.GatewayToken;
+        _accountApiBaseUrl = s.AccountApiBaseUrl;
         _hotkeys = (s.Hotkeys ?? HotkeySettings.CreateDefaults()).EnsurePopulated();
         BuildHotkeyRows();
+
+        _auth.AuthStateChanged += OnAuthStateChanged;
 
         RecentSearches = [];
         NavItems =
@@ -121,6 +135,8 @@ public sealed class MainWindowViewModel : ReactiveObject
         {
             _history.Remove(seriesId);
             RefreshHistory();
+            if (_historySync.IsEnabled)
+                _ = FireAndForgetCloudAsync(() => _historySync.RemoveOneAsync(seriesId));
         });
         ClearHistoryCommand = ReactiveCommand.CreateFromTask(ConfirmClearHistoryAsync);
         SelectDownloadTabCommand = ReactiveCommand.Create<string>(tab =>
@@ -161,6 +177,9 @@ public sealed class MainWindowViewModel : ReactiveObject
         BeginRecordHotkeyCommand = ReactiveCommand.Create<HotkeyAction>(BeginRecordHotkey);
         ClearHotkeyCommand = ReactiveCommand.Create<HotkeyAction>(ClearHotkey);
         ResetHotkeysCommand = ReactiveCommand.Create(ResetHotkeys);
+        OpenLoginCommand = ReactiveCommand.Create(OpenLoginWindow);
+        SignOutCommand = ReactiveCommand.Create(SignOut);
+        SyncNowCommand = ReactiveCommand.CreateFromTask(SyncNowAsync);
 
         _globalHotkeys.StatusChanged += () => Avalonia.Threading.Dispatcher.UIThread.Post(RefreshHotkeyStatuses);
         _globalHotkeys.ApplyBindings(_hotkeys.GlobalHotkeysEnabled, _hotkeys.GetGlobalBindings());
@@ -225,6 +244,9 @@ public sealed class MainWindowViewModel : ReactiveObject
     public ReactiveCommand<HotkeyAction, RxVoid> BeginRecordHotkeyCommand { get; }
     public ReactiveCommand<HotkeyAction, RxVoid> ClearHotkeyCommand { get; }
     public ReactiveCommand<RxVoid, RxVoid> ResetHotkeysCommand { get; }
+    public ReactiveCommand<RxVoid, RxVoid> OpenLoginCommand { get; }
+    public ReactiveCommand<RxVoid, RxVoid> SignOutCommand { get; }
+    public ReactiveCommand<RxVoid, RxVoid> SyncNowCommand { get; }
 
     public HotkeySettings Hotkeys => _hotkeys;
     public HotkeyAction? ActiveRecordingAction => _activeRecordingAction;
@@ -464,6 +486,29 @@ public sealed class MainWindowViewModel : ReactiveObject
     public char TokenPasswordChar => IsTokenVisible ? '\0' : '•';
     public string TokenVisibilityButtonText => IsTokenVisible ? "隐藏" : "显示";
 
+    // ---- 账号与云同步 ----
+    public bool IsSignedIn => _auth.IsSignedIn;
+    public bool IsSignedOut => !IsSignedIn;
+    public string AccountNickname => _auth.CurrentUser?.Nickname ?? string.Empty;
+    public string AccountStatusText => IsSignedIn ? $"已登录 · {AccountNickname}" : "未登录 · 历史仅保存在本机";
+
+    public string AccountApiBaseUrl
+    {
+        get => _accountApiBaseUrl;
+        set
+        {
+            if (string.Equals(_accountApiBaseUrl, value, StringComparison.Ordinal)) return;
+            this.RaiseAndSetIfChanged(ref _accountApiBaseUrl, value);
+            SaveSettings();
+        }
+    }
+
+    public bool IsSyncing
+    {
+        get => _isSyncing;
+        private set => this.RaiseAndSetIfChanged(ref _isSyncing, value);
+    }
+
     public bool IsHeroFlightEnabled
     {
         get => _isHeroFlightEnabled;
@@ -639,6 +684,8 @@ public sealed class MainWindowViewModel : ReactiveObject
     {
         RefreshHistory();
         RefreshDownloads();
+        // 恢复登录态会触发 AuthStateChanged → 自动拉取云端历史并合并
+        await _auth.RestoreAsync();
         await SelectCategoryAsync(DramaCategory.All);
     }
 
@@ -755,6 +802,9 @@ public sealed class MainWindowViewModel : ReactiveObject
 
     private void OnPlayerHistoryUpdated()
     {
+        // 播放进度变更时节流上传云端（约每 15 秒一次），失败不打扰用户。
+        _ = PushLatestRecordToCloudAsync();
+
         // Defer rebuilding HistoryRows while Player is open or Hero return flight is animating so History cards stay intact.
         if (Player.IsOpen || IsHeroFlightEnabled)
         {
@@ -1081,11 +1131,13 @@ public sealed class MainWindowViewModel : ReactiveObject
     {
         await _dialogs.ShowAsync(session => new ConfirmDialogViewModel(
             "清空浏览历史",
-            "确定要清空全部观看记录吗？清空后将不再保留断点续播位置。",
+            "确定要清空全部观看记录吗？清空后将同步删除云端记录，并不再保留断点续播位置。",
             () =>
             {
                 _history.Clear();
                 RefreshHistory();
+                if (_historySync.IsEnabled)
+                    _ = FireAndForgetCloudAsync(() => _historySync.ClearAllAsync());
                 session.Close();
             },
             () => session.Close()));
@@ -1142,6 +1194,100 @@ public sealed class MainWindowViewModel : ReactiveObject
         }
     }
 
+    // ---------- 账号与云同步 ----------
+
+    private async Task FireAndForgetCloudAsync(Func<Task> action)
+    {
+        try { await action(); }
+        catch { /* 后台同步失败不打扰用户 */ }
+    }
+
+    private void OnAuthStateChanged()
+    {
+        this.RaisePropertyChanged(nameof(IsSignedIn));
+        this.RaisePropertyChanged(nameof(IsSignedOut));
+        this.RaisePropertyChanged(nameof(AccountNickname));
+        this.RaisePropertyChanged(nameof(AccountStatusText));
+        if (IsSignedIn)
+            _ = SyncFromCloudAsync(showToast: true);
+        else
+            _toast.ShowSuccess("已退出登录，观看历史仅保存在本机");
+    }
+
+    private void OpenLoginWindow()
+    {
+        if (IsSignedIn)
+        {
+            _toast.ShowSuccess("当前已登录：" + AccountNickname);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(AccountApiBaseUrl))
+        {
+            _toast.ShowError("请先在下方填写账号服务地址");
+            return;
+        }
+        SaveSettings();
+        var vm = Program.Services.GetRequiredService<LoginWindowViewModel>();
+        var window = new LoginWindow(vm);
+        window.Show();
+    }
+
+    private void SignOut() => _auth.SignOut();
+
+    private async Task SyncNowAsync()
+    {
+        if (!IsSignedIn)
+        {
+            _toast.ShowError("请先登录账号后再同步");
+            return;
+        }
+        await SyncFromCloudAsync(showToast: true);
+    }
+
+    /// <summary>登录后：先把本地历史并入云端，再把合并结果回填本地，实现多设备同步。</summary>
+    private async Task SyncFromCloudAsync(bool showToast)
+    {
+        if (IsSyncing || !_historySync.IsEnabled) return;
+        IsSyncing = true;
+        try
+        {
+            var local = _history.GetHistory();
+            var uploaded = await _historySync.UploadAllAsync(local);
+            _history.ReplaceAll(uploaded.Records);
+            RefreshHistory();
+            _lastCloudPushTick = Environment.TickCount64;
+            if (showToast)
+                _toast.ShowSuccess($"观看历史已同步（共 {uploaded.Records.Count} 条）");
+        }
+        catch (Exception ex)
+        {
+            if (showToast)
+                _toast.ShowError("同步观看历史失败：" + ex.Message);
+        }
+        finally
+        {
+            IsSyncing = false;
+        }
+    }
+
+    /// <summary>播放进度更新时，节流地把最新一条记录单条推送云端。</summary>
+    private async Task PushLatestRecordToCloudAsync()
+    {
+        if (!_historySync.IsEnabled || IsSyncing) return;
+        if (Environment.TickCount64 - _lastCloudPushTick < 15_000) return;
+        var latest = _history.GetHistory().FirstOrDefault();
+        if (latest is null) return;
+        _lastCloudPushTick = Environment.TickCount64;
+        try
+        {
+            await _historySync.PushOneAsync(latest);
+        }
+        catch
+        {
+            // 后台节流同步失败不打扰用户，下次进度更新会重试
+        }
+    }
+
     private void SaveSettings()
     {
         _settings.Update(_settings.Current with
@@ -1153,6 +1299,7 @@ public sealed class MainWindowViewModel : ReactiveObject
             DownloadDirectory = DownloadDirectory,
             GatewayBaseUrl = GatewayBaseUrl,
             GatewayToken = GatewayToken,
+            AccountApiBaseUrl = AccountApiBaseUrl,
             Hotkeys = _hotkeys
         });
     }

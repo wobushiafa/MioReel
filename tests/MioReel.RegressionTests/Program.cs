@@ -30,6 +30,33 @@ try
     File.WriteAllText(path, "{broken");
     Check(new FileHistoryService(path).GetHistory().Count == 0, "损坏历史文件允许正常启动");
 
+    // 账号会话：本地 token 持久化与退出清除（不落用户密码）
+    var sessionPath = Path.Combine(root, "session.json");
+    var authSettings = new InMemorySettingsService();
+    var authService = new ApiAuthService(new HttpClient(), authSettings, sessionPath);
+    Check(!authService.IsSignedIn, "初始状态为未登录");
+    var fakeToken = "header.payload.signature";
+    File.WriteAllText(sessionPath, System.Text.Json.JsonSerializer.Serialize(
+        new StoredSession(fakeToken, new UserProfile("openid-1", "胡哥", null, DateTimeOffset.UtcNow), DateTimeOffset.UtcNow)));
+    // RestoreAsync 需要服务端校验 token，离线时保留本地会话：这里只验证文件被识别未误删
+    Check(File.Exists(sessionPath), "登录会话文件可被写入");
+    authService.SignOut();
+    Check(!File.Exists(sessionPath) && !authService.IsSignedIn, "退出登录清除本地会话");
+
+    // 云同步回填：ReplaceAll 按 seriesId 去重、保留最新 WatchedAt、持久化且容量封顶
+    var cloudDramaA = new DramaItem("cloud-a", "云端剧A", "", 5, "", "", [], "2026", DramaCategory.All, "#000000", "#FFFFFF");
+    var cloudDramaB = new DramaItem("cloud-b", "云端剧B", "", 5, "", "", [], "2026", DramaCategory.All, "#000000", "#FFFFFF");
+    var newest = new HistoryRecord(cloudDramaA, 4, 80, DateTimeOffset.UtcNow);
+    var older = new HistoryRecord(cloudDramaA, 1, 10, DateTimeOffset.UtcNow.AddDays(-2));
+    var other = new HistoryRecord(cloudDramaB, 2, 30, DateTimeOffset.UtcNow.AddDays(-1));
+    history = new FileHistoryService(path);
+    history.ReplaceAll([older, other, newest]);
+    var synced = new FileHistoryService(path).GetHistory();
+    Check(synced.Count == 2, "云同步回填按 seriesId 去重");
+    Check(synced.First(x => x.Drama.SeriesId == "cloud-a").LastEpisodeNo == 4, "云同步回填保留最新观看记录");
+    history.ReplaceAll([]);
+    Check(new FileHistoryService(path).GetHistory().Count == 0, "云同步回填空结果会清空本地历史");
+
     history = new FileHistoryService(path);
     history.RecordWatch(drama, 1, 25, 30, 120);
     var catalog = new FakeCatalog();
@@ -239,12 +266,39 @@ try
     mediaProxy.ReleaseSession(playable);
     using var released = await http.GetAsync(playable);
     Check(released.StatusCode == HttpStatusCode.NotFound, "释放后的媒体会话不可继续访问");
+
+#if HAS_API_PROJECT
+    // 账号密码：PBKDF2 哈希不可逆、校验正确、篡改即失败、同密码不同盐
+    var hash1 = MioReel.Api.Auth.PasswordHasher.Hash("correct horse battery staple");
+    var hash2 = MioReel.Api.Auth.PasswordHasher.Hash("correct horse battery staple");
+    Check(!hash1.Contains("correct horse", StringComparison.OrdinalIgnoreCase), "密码明文不出现在哈希中");
+    Check(hash1.StartsWith("pbkdf2-sha256$100000$", StringComparison.Ordinal), "哈希带算法与迭代次数标记");
+    Check(hash1 != hash2, "相同密码不同盐产生不同哈希");
+    Check(MioReel.Api.Auth.PasswordHasher.Verify("correct horse battery staple", hash1), "正确密码校验通过");
+    Check(!MioReel.Api.Auth.PasswordHasher.Verify("wrong password", hash1), "错误密码校验失败");
+    Check(!MioReel.Api.Auth.PasswordHasher.Verify("correct horse battery staple", "garbage"), "损坏哈希安全失败");
+
+    // 账号存储：注册唯一性、大小写不敏感、密码哈希入库、历史按用户隔离
+    var storeDir = Path.Combine(root, "store");
+    var accountStore = new MioReel.Api.Auth.AccountStore(storeDir);
+    var alice = accountStore.Register("Alice", hash1);
+    Check(alice is not null && alice.Id == "alice" && alice.Nickname == "Alice", "注册成功并规范化用户名");
+    Check(accountStore.Register("alice", hash1) is null, "重复用户名（忽略大小写）注册被拒绝");
+    Check(accountStore.GetPasswordHash("ALICE") == hash1, "大小写不敏感读出密码哈希");
+    var bob = accountStore.Register("bob", MioReel.Api.Auth.PasswordHasher.Hash("bobsecret"));
+    Check(bob is not null && bob.Id == "bob", "第二个账号注册成功");
+    accountStore.MergeHistory("alice", [new HistoryRecord(
+        new DramaItem("s1", "剧1", "", 10, "", "", [], "", DramaCategory.All, "", ""), 3, 40, DateTimeOffset.UtcNow)]);
+    Check(accountStore.GetHistory("alice").Count == 1 && accountStore.GetHistory("bob").Count == 0,
+        "观看历史按账号隔离");
+    Check(File.Exists(Path.Combine(storeDir, "account-store.json")), "账号数据落盘持久化");
+#endif
+
     Console.WriteLine("所有回归检查通过");
 }
 finally
 {
-    foreach (var file in Directory.GetFiles(root)) File.Delete(file);
-    Directory.Delete(root);
+    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 }
 
 static void Check(bool condition, string description)

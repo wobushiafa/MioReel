@@ -69,6 +69,28 @@ public sealed class FileHistoryService : IHistoryService
         }
     }
 
+    public void ReplaceAll(IReadOnlyList<HistoryRecord> records)
+    {
+        lock (_gate)
+        {
+            var merged = new List<HistoryRecord>();
+            if (records is not null)
+            {
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var record in records.OrderByDescending(x => x.WatchedAt))
+                {
+                    if (record?.Drama is null || string.IsNullOrWhiteSpace(record.Drama.SeriesId)) continue;
+                    if (!seen.Add(record.Drama.SeriesId)) continue;
+                    merged.Add(record);
+                    if (merged.Count >= MaxRecords) break;
+                }
+            }
+            _records.Clear();
+            _records.AddRange(merged);
+            Save();
+        }
+    }
+
     private static double NormalizeSeconds(double value) => double.IsFinite(value) ? Math.Max(0, value) : 0;
 
     private void Save()

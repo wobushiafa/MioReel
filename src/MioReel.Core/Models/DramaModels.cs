@@ -222,6 +222,7 @@ public sealed record AppSettings(
     double? Volume = null,
     bool IsMuted = false,
     double AudioBoostDb = 0.0,
-    bool? DanmakuEnabled = null);
+    bool? DanmakuEnabled = null,
+    string AccountApiBaseUrl = "http://47.114.100.80:9999");
 
 public sealed record WindowPlacement(int X, int Y, double Width, double Height, bool IsMaximized = false);

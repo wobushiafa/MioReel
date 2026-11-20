@@ -18,6 +18,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IHistoryService, FileHistoryService>();
         services.AddSingleton<IDownloadService, FileDownloadService>();
         services.AddSingleton<ISettingsService, FileSettingsService>();
+        services.AddSingleton<IAuthService>(sp =>
+            new ApiAuthService(sp.GetRequiredService<HttpClient>(), sp.GetRequiredService<ISettingsService>()));
+        services.AddSingleton<IHistorySyncService, HistorySyncService>();
         return services;
     }
 }
